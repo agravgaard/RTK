@@ -275,28 +275,50 @@ SpectralForwardModelImageFilter<DecomposedProjectionsType, MeasuredProjectionsTy
     }
   else
     {
-    // Read the detector response image as a matrix
-    this->m_DetectorResponse.set_size(this->m_NumberOfSpectralBins, this->m_NumberOfEnergies);
-    this->m_DetectorResponse.fill(0);
-    typename DetectorResponseImageType::IndexType indexDet;
-    for (unsigned int energy=0; energy<this->m_NumberOfEnergies; energy++)
+    this->m_DetectorResponse = BinDetectorResponse(this->GetDetectorResponse(),
+                                                   m_Thresholds,
+                                                   m_NumberOfEnergies);
+    }
+}
+
+template<typename DecomposedProjectionsType, typename MeasuredProjectionsType,
+         typename IncidentSpectrumImageType, typename DetectorResponseImageType, typename MaterialAttenuationsImageType>
+typename SpectralForwardModelImageFilter<DecomposedProjectionsType, MeasuredProjectionsType,
+                                IncidentSpectrumImageType, DetectorResponseImageType, MaterialAttenuationsImageType>::DetectorResponseType
+SpectralForwardModelImageFilter<DecomposedProjectionsType, MeasuredProjectionsType,
+                                IncidentSpectrumImageType, DetectorResponseImageType, MaterialAttenuationsImageType>
+::BinDetectorResponse(const DetectorResponseImageType *drm,
+                      const ThresholdsType &thresholds,
+                      const unsigned int numberOfEnergies)
+{
+  DetectorResponseType binnedResponse;
+  int numberOfSpectralBins = thresholds.GetSize()-1;
+  binnedResponse.set_size(numberOfSpectralBins, numberOfEnergies);
+  binnedResponse.fill(0);
+  typename DetectorResponseImageType::IndexType indexDet;
+  for (unsigned int energy=0; energy<numberOfEnergies; energy++)
+    {
+    indexDet[0] = energy;
+    for (unsigned int bin=0; bin<numberOfSpectralBins; bin++)
       {
-      indexDet[0] = energy;
-      for (unsigned int bin=0; bin<m_NumberOfSpectralBins; bin++)
+      // First and last values, assume pixel indicator to find fraction
+      int infPulse = itk::Math::floor(thresholds[bin]-0.5);
+      double wInf = infPulse+1.-thresholds[bin]+0.5;
+      indexDet[1] = infPulse;
+      binnedResponse[bin][energy] += wInf*drm->GetPixel(indexDet);
+      int supPulse = itk::Math::floor(thresholds[bin+1]-0.5);
+      double wSup = thresholds[bin+1]-0.5-supPulse;
+      indexDet[1] = supPulse;
+      binnedResponse[bin][energy] += wSup*drm->GetPixel(indexDet);
+      // Intermediate values
+      for (int pulseHeight=infPulse+1; pulseHeight<supPulse; pulseHeight++)
         {
-        for (int pulseHeight=m_Thresholds[bin]-1; pulseHeight<m_Thresholds[bin+1]; pulseHeight++)
-          {
-          indexDet[1] = pulseHeight;
-          // Linear interpolation on the pulse heights: half of the pulses that have "threshold"
-          // height are considered below threshold, the other half are considered above threshold
-          if ((pulseHeight == m_Thresholds[bin]-1) || (pulseHeight == m_Thresholds[bin+1] - 1))
-            this->m_DetectorResponse[bin][energy] += this->GetDetectorResponse()->GetPixel(indexDet) / 2;
-          else
-            this->m_DetectorResponse[bin][energy] += this->GetDetectorResponse()->GetPixel(indexDet);
-          }
+        indexDet[1] = pulseHeight;
+        binnedResponse[bin][energy] += drm->GetPixel(indexDet);
         }
       }
     }
+  return binnedResponse;
 }
 
 template<typename DecomposedProjectionsType, typename MeasuredProjectionsType,

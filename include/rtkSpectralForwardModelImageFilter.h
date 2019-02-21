@@ -19,7 +19,6 @@
 #ifndef rtkSpectralForwardModelImageFilter_h
 #define rtkSpectralForwardModelImageFilter_h
 
-#include "rtkSimplexSpectralProjectionsDecompositionImageFilter.h"
 #include "rtkSchlomka2008NegativeLogLikelihood.h"
 #include "rtkDualEnergyNegativeLogLikelihood.h"
 
@@ -60,7 +59,7 @@ public:
   typedef MeasuredProjectionsType       OutputImageType;
 
   /** Convenient information */
-  typedef itk::VariableLengthVector<int>       ThresholdsType;
+  typedef itk::VariableLengthVector<double>    ThresholdsType;
   typedef vnl_matrix<double>                   DetectorResponseType;
   typedef vnl_matrix<double>                   MaterialAttenuationsType;
 
@@ -109,6 +108,10 @@ public:
 
   itkSetMacro(ComputeVariances, bool)
   itkGetMacro(ComputeVariances, bool)
+
+  static DetectorResponseType BinDetectorResponse(const DetectorResponseImageType *drm,
+                                                  const ThresholdsType &thresholds,
+                                                  const unsigned int numberOfEnergies);
 
 protected:
   SpectralForwardModelImageFilter();
