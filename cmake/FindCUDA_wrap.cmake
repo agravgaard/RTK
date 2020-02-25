@@ -56,8 +56,12 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
      -gencode arch=compute_35,code=compute_35
      )
 
-if(NOT "-std=c++${CMAKE_CXX_STANDARD}" IN_LIST CUDA_NVCC_FLAGS)
-  list(APPEND CUDA_NVCC_FLAGS "-std=c++${CMAKE_CXX_STANDARD}")
+set(TMP_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+if (17 LESS_EQUAL ${TMP_CXX_STANDARD})
+  set(TMP_CXX_STANDARD 14)
+endif()
+if(NOT "-std=c++${TMP_CXX_STANDARD}" IN_LIST CUDA_NVCC_FLAGS)
+  list(APPEND CUDA_NVCC_FLAGS "-std=c++${TMP_CXX_STANDARD}")
 endif()
 
 if(CUDA_FOUND)
